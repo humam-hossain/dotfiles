@@ -20,3 +20,9 @@ sudo pacman -Sy --noconfirm --needed btop
 
 echo "[INSTALL] fastfetch"
 sudo pacman -Sy --noconfirm --needed fastfetch
+
+echo "[INSTALL] curl"
+sudo pacman -Sy --noconfirm --needed curl
+
+echo "[INSTALL] wget"
+sudo pacman -Sy --noconfirm --needed wget
