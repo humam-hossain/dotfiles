@@ -26,3 +26,8 @@ sudo pacman -Sy --noconfirm --needed curl
 
 echo "[INSTALL] wget"
 sudo pacman -Sy --noconfirm --needed wget
+
+echo "[INSTALL] docker"
+sudo pacman -Sy --noconfirm --needed docker
+sudo systemctl enable --now docker.service
+sudo usermod -aG docker $USER

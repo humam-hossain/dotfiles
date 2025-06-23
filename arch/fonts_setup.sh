@@ -9,5 +9,8 @@ sudo pacman -Sy --noconfirm --needed ttf-jetbrains-mono-nerd
 echo "[INSTALL] noto fonts"
 sudo pacman -Sy --noconfirm --needed noto-fonts
 
+echo "[INSTALL] papirus-icon-theme"
+sudo pacman -Sy --noconfirm --needed papirus-icon-theme
+
 echo "[SYNC] rebuild font cache"
 fc-cache -fv
