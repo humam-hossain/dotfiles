@@ -6,6 +6,9 @@ sudo pacman -Sy --noconfirm --needed unzip tar
 echo "[INSTALL] micro"
 sudo pacman -Sy --noconfirm --needed micro
 
+echo "[INSTALL] w3m viu"
+sudo pacman -Sy --noconfirm --needed w3m viu
+
 echo "[INSTALL] vlc"
 sudo pacman -Sy --noconfirm --needed vlc
 
@@ -31,3 +34,10 @@ echo "[INSTALL] docker"
 sudo pacman -Sy --noconfirm --needed docker
 sudo systemctl enable --now docker.service
 sudo usermod -aG docker $USER
+
+echo "[INSTALL] discord from yay"
+yay -Sy --noconfirm --needed discord
+
+echo "[INSTALL] ferdium"
+yay -Sy --noconfirm --needed ferdium-bin
+
