@@ -58,8 +58,8 @@ echo "[DONE] all Oh My Zsh plugins/themes are present."
 echo "[CONFIG] copying .zshrc"
 cp -f configs/.zshrc ~/.zshrc
 
+echo "[CONFIG] copying .zprofile"
+cp -f configs/.zprofile ~/.zprofile
+
 echo "[CONFIG] copying .p10k.zsh"
 cp -f configs/.p10k.zsh ~/.p10k.zsh
-
-echo "[SYNC] zsh"
-source ~/.zshrc

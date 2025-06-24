@@ -1,25 +1,20 @@
 set -xe
 
-echo "[CONFIG] Hyprland autolaunch"
-MARKER="# <<< Hyprland auto-launch block >>>"
-BLOCK=$(cat <<'EOF'
-if [[ -z $WAYLAND_DISPLAY && $(tty) = /dev/tty1 ]]; then
-    exec Hyprland
-fi
-EOF
-)
+echo "[INSTALL] hyprland"
+sudo pacman -Sy --noconfirm --needed hyprland
 
-if grep -Fxq "${MARKER}" ~/.bash_profile; then
-    echo "Hyprland block already installed in ${PROFILE}."
-    exit 0
-fi
+echo "[INSTALL] hyprpaper hyprshot hyprlock swaync"
+sudo pacman -Sy --noconfirm --needed hyprpaper hyprshot hyprlock swaync
 
-{
-    echo
-    echo "$MARKER"
-    echo "$BLOCK"
-    echo 
-} >> ~/.bash_profile
 
-echo "[VERIFY] hyprland autolaunch"
-cat ~/.bash_profile
+echo "[INSTALL] ddcutil"
+sudo pacman -Sy --noconfirm --needed ddcutil
+sudo usermod -aG i2c $USER
+
+echo "[INSTALL] jq"
+sudo pacman -Sy --noconfirm --needed jq
+
+echo "[CONFIG] Hyprland config"
+mkdir -p ~/.config/hypr
+cp -rf configs/hypr/* ~/.config/hypr/
+
