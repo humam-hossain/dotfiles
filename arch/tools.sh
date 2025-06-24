@@ -41,3 +41,8 @@ yay -Sy --noconfirm --needed discord
 echo "[INSTALL] ferdium"
 yay -Sy --noconfirm --needed ferdium-bin
 
+echo "[INSTALL] zoom"
+yay -Sy --noconfirm --needed zoom
+
+echo "[INSTALL] taskwarrior"
+sudo pacman -Sy --noconfirm --needed task
