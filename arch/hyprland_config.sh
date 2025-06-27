@@ -11,9 +11,6 @@ echo "[INSTALL] ddcutil"
 sudo pacman -Sy --noconfirm --needed ddcutil
 sudo usermod -aG i2c $USER
 
-echo "[INSTALL] jq"
-sudo pacman -Sy --noconfirm --needed jq
-
 echo "[CONFIG] Hyprland config"
 mkdir -p ~/.config/hypr
 cp -rf configs/hypr/* ~/.config/hypr/
