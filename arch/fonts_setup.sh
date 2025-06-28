@@ -12,5 +12,8 @@ sudo pacman -Sy --noconfirm --needed noto-fonts
 echo "[INSTALL] papirus-icon-theme"
 sudo pacman -Sy --noconfirm --needed papirus-icon-theme
 
+echo "[INSTALL] noto-fonts-emoji"
+sudo pacman -Sy --noconfirm --needed noto-fonts-emoji
+
 echo "[SYNC] rebuild font cache"
 fc-cache -fv
