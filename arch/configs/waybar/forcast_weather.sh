@@ -38,7 +38,7 @@ get_weather_code_text() {
                 weather_size="12000"
                 ;;
             51|53|55|56|57|61|63|65|66|67)
-                weather_icon=""
+                weather_icon=""
                 weather_color="white"
                 weather_size="12000"
                 ;;
@@ -76,7 +76,7 @@ get_weather_code_text() {
                 weather_size="12000"
                 ;;
             51|53|55|56|57|61|63|65|66|67)
-                weather_icon=""
+                weather_icon=""
                 weather_color="white"
                 weather_size="12000"
                 ;;
@@ -105,7 +105,6 @@ get_weather_code_text() {
 
     echo "<span color='${weather_color}' size='${weather_size}'>${weather_icon}</span>"
 }
-
 
 get_temp_display_and_color() {
     local temp_2m="$1"
@@ -172,6 +171,7 @@ get_humidity_display() {
 
     echo "<span color='#3498db'>${display}</span>"
 }
+
 get_pressure_display() {
     local next_pressure="$1"
     local curr_pressure="$2"
@@ -236,17 +236,101 @@ get_visibility_display() {
 
 get_tooltip(){
     local response="$1"
+    local sunrise="$2"
+    local sunset="$3"
+    local curr_temp="$4"
+    local curr_apparent_temp="$5"
+    local curr_humidity="$6"
+    local curr_precipitation="$7"
+    local curr_pressure="$8"
+    local curr_datetime_f="$9"
+    
+    # Get array lengths
+    local hourly_count=$(jq -r '.hourly.time | length' <<< "$response")
+    
+    # Start building tooltip
+    local tooltip="<big><b>🌤️ Weather Forecast - Next 24 Hours</b></big>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Updated: ${curr_datetime_f}
 
-    # hourly
-    hourly_time=$(jq -r '.hourly.time' <<< "$response")
-    hourly_weather_code=$(jq -r '.hourly.weather_code' <<< "$response")
-    hourly_temp=$(jq -r '.hourly.temperature_2m' <<< "$response")
-    hourly_apparent_temp=$(jq -r '.hourly.apparent_temperature' <<< "$response")
-    hourly_humidity=$(jq -r '.hourly.relative_humidity_2m' <<< "$response")
-    hourly_precipitation=$(jq -r '.hourly.precipitation' <<< "$response")
-    hourly_precipitation_prob=$(jq -r '.hourly.precipitation_probability' <<< "$response")
-    hourly_pressure=$(jq -r '.hourly.surface_pressure' <<< "$response")
-    hourly_visibility=$(jq -r '.hourly.visibility' <<< "$response")
+<b>Current Weather:</b>
+🌡️ Temperature: ${curr_temp}°C (feels like ${curr_apparent_temp}°C)
+💧 Humidity: ${curr_humidity}%
+🌧️ Precipitation: ${curr_precipitation}mm
+🗲 Pressure: ${curr_pressure}atm
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+<b>Hourly Forecast:</b>
+<tt>"
+    
+    # Loop through each hour (limit to 24 hours to keep tooltip manageable)
+    local max_hours=$((hourly_count < 24 ? hourly_count : 24))
+    
+    for ((i = 0; i < max_hours; i++)); do
+        # Extract data for this hour
+        local hour_datetime=$(jq -r --argjson idx "$i" '.hourly.time[$idx]' <<< "$response")
+        local hour_time=$(date -d "${hour_datetime}" +'%-I:%M%p')
+        local hour_weather_code=$(jq -r --argjson idx "$i" '.hourly.weather_code[$idx]' <<< "$response")
+        local hour_temp=$(jq -r --argjson idx "$i" '.hourly.temperature_2m[$idx]' <<< "$response")
+        local hour_apparent_temp=$(jq -r --argjson idx "$i" '.hourly.apparent_temperature[$idx]' <<< "$response")
+        local hour_humidity=$(jq -r --argjson idx "$i" '.hourly.relative_humidity_2m[$idx]' <<< "$response")
+        local hour_pressure=$(jq -r --argjson idx "$i" '.hourly.surface_pressure[$idx]' <<< "$response")
+        local hour_pressure_atm=$(echo "scale=4; $hour_pressure * 0.0009869233" | bc | awk '{printf "%.2f", $0}')
+        local hour_precipitation=$(jq -r --argjson idx "$i" '.hourly.precipitation[$idx]' <<< "$response")
+        local hour_precipitation_prob=$(jq -r --argjson idx "$i" '.hourly.precipitation_probability[$idx]' <<< "$response")
+        local hour_visibility=$(jq -r --argjson idx "$i" '.hourly.visibility[$idx]' <<< "$response")
+        local hour_visibility_km=$(echo "scale=2; $hour_visibility / 1000" | bc | awk '{printf "%.1f", $0}')
+
+        # Get previous hour's values (or current if i==0)
+        if (( i == 0 )); then
+            prev_temp="$hour_temp"
+            prev_apparent_temp="$hour_apparent_temp"
+            prev_humidity="$hour_humidity"
+            prev_pressure="$hour_pressure"
+            prev_precipitation="$hour_precipitation"
+        else
+            prev_temp=$(jq -r --argjson idx "$((i-1))" '.hourly.temperature_2m[$idx]' <<< "$response")
+            prev_apparent_temp=$(jq -r --argjson idx "$((i-1))" '.hourly.apparent_temperature[$idx]' <<< "$response")
+            prev_humidity=$(jq -r --argjson idx "$((i-1))" '.hourly.relative_humidity_2m[$idx]' <<< "$response")
+            prev_pressure=$(jq -r --argjson idx "$((i-1))" '.hourly.surface_pressure[$idx]' <<< "$response")
+            prev_pressure=$(echo "scale=4; $prev_pressure * 0.0009869233" | bc | awk '{printf "%.2f", $0}')
+            prev_precipitation=$(jq -r --argjson idx "$((i-1))" '.hourly.precipitation[$idx]' <<< "$response")
+        fi
+        
+        # Determine if it's day or night for this hour
+        local hour_is_day=$(get_is_day "$hour_datetime" "$sunset" "$sunrise")
+        
+        # Generate display text for this hour
+        local hour_weather_text=$(get_weather_code_text "$hour_weather_code" "$hour_is_day")
+        local hour_temp_text=$(get_temp_display_and_color "$hour_temp" "$hour_apparent_temp" "$prev_temp" "$prev_apparent_temp")
+        local hour_humidity_text=$(get_humidity_display "$hour_humidity" "$prev_humidity")
+        local hour_pressure_text=$(get_pressure_display "$hour_pressure_atm" "$prev_pressure")
+        local hour_precipitation_text=$(get_precipitation_display "$hour_precipitation" "$hour_precipitation_prob" "$prev_precipitation")
+        local hour_visibility_text=$(get_visibility_display "$hour_visibility_km")
+        
+        # Add this hour's data to tooltip
+        # Add separator if within 60 minutes after sunrise or sunset for better readability
+        local sunrise_diff=$(( $(date -d "$hour_datetime" +%s) - $(date -d "$sunrise" +%s) ))
+        local sunset_diff=$(( $(date -d "$hour_datetime" +%s) - $(date -d "$sunset" +%s) ))
+        if (( sunrise_diff > 0 && sunrise_diff < 3600 )); then
+            tooltip+="
+            ──────────────────────────────── Sunrise: $(date -d "$sunrise" +'%-I:%M%p') ────────────────────────────────"
+        elif (( sunset_diff > 0 && sunset_diff < 3600 )); then
+            tooltip+="
+            ──────────────────────────────── Sunset: $(date -d "$sunset" +'%-I:%M%p') ────────────────────────────────"
+        fi
+        tooltip+="
+        ${hour_time}:  ${hour_weather_text} ${hour_temp_text} ${hour_humidity_text} ${hour_pressure_text} ${hour_precipitation_text} ${hour_visibility_text}"
+        
+    done
+    
+    tooltip+="
+</tt>
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+"
+    
+    echo "$tooltip"
 }
 
 LATITUDE=23.763953
@@ -255,7 +339,7 @@ LONGITUDE=90.424419
 # Dependencies check
 for cmd in curl jq bc; do
     if ! command -v "$cmd" &> /dev/null; then
-        echo "{\"text\":\" Missing $cmd\",\"tooltip\":\"error\"}"
+        echo "{\"text\":\" Missing $cmd\",\"tooltip\":\"error\"}"
         exit 0
     fi
 done
@@ -265,7 +349,7 @@ response=$(curl -s \
     "https://api.open-meteo.com/v1/forecast?latitude=23.753&longitude=90.4379&daily=sunrise,sunset&hourly=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,precipitation_probability,visibility,surface_pressure&current=weather_code,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure&timezone=auto&forecast_days=1")
 
 if [[ -z "$response" ]]; then
-    echo "{\"text\":\" No data\",\"tooltip\":\"error\"}"
+    echo "{\"text\":\" No data\",\"tooltip\":\"error\"}"
     exit 0
 fi
 
@@ -321,15 +405,10 @@ forcast_precipitation_text=$(get_precipitation_display "$next_hour_precipitation
 forcast_visibility_text=$(get_visibility_display "$next_hour_visibility")
 
 full_text="${sunrise_text} ${sunset_text} | ${next_hour_time}: ${forcast_weather_text} ${forcast_temp_text} ${forcast_humidity_text} $forcast_pressure_text $forcast_precipitation_text $forcast_visibility_text"
+
 # Create detailed tooltip with proper escaping
-tooltip_text="<big>Weather Forecast</big>
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${next_hour_is_day}
-${next_hour_weather_code}
-Updated: ${curr_datetime_f}
-"
+tooltip_text=$(get_tooltip "$response" "$sunrise" "$sunset" "$curr_temp" "$curr_apparent_temp" "$curr_humidity" "$curr_precipitation" "$curr_pressure" "$curr_datetime_f")
 
 output=$(jq -nc --arg text "$full_text" --arg tooltip "$tooltip_text" '{text: $text, tooltip: $tooltip}')
 
 echo -n "$output"
-
