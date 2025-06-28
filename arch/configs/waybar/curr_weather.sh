@@ -183,6 +183,17 @@ get_precipitation_display() {
     echo "<span color='#5dade2'><span size='12000'>☔</span> ${precipitation}mm</span>"
 }
 
+# Get sunrise/sunset display
+get_sun_times_display() {
+    local sunrise_time="$1"
+    local sunset_time="$2"
+    
+    local sunrise_text="<span color='#ffa700'><span size='12000'></span>  ${sunrise_time}</span>"
+    local sunset_text="<span color='#5dade2'><span size='12000'></span>  ${sunset_time}</span>"
+    
+    echo "${sunrise_text} ${sunset_text}"
+}
+
 # Function to create detailed tooltip
 create_tooltip() {
     local weather_icon="$1"
@@ -268,6 +279,12 @@ humidity=$(jq -r '.current.relative_humidity_2m' <<< "$response")
 surface_pressure=$(jq -r '.current.surface_pressure' <<< "$response")
 precipitation=$(jq -r '.current.precipitation' <<< "$response")
 
+# Extract sunrise/sunset data
+sunrise=$(jq -r '.daily.sunrise[0]' <<< "$response")
+sunset=$(jq -r '.daily.sunset[0]' <<< "$response")
+sunrise_time=$(date -d "$sunrise" +'%-I:%M%p')
+sunset_time=$(date -d "$sunset" +'%-I:%M%p')
+
 # Generate display components using functions
 weather_text=$(get_weather_text "$weather_code")
 weather_code_display=$(get_weather_icon "$weather_code" "$is_day")
@@ -275,9 +292,10 @@ temp_text=$(get_temp_display "$temp_2m" "$apparent_temp")
 humidity_text=$(get_humidity_display "$humidity")
 pressure_text=$(get_pressure_display "$surface_pressure")
 precipitation_text=$(get_precipitation_display "$precipitation")
+sun_times_text=$(get_sun_times_display "$sunrise_time" "$sunset_time")
 
 # Construct full display text
-full_text="${weather_code_display}  ${temp_text} ${humidity_text} ${pressure_text} ${precipitation_text}"
+full_text="${weather_code_display}  ${temp_text} ${humidity_text} ${pressure_text} ${precipitation_text} ${sun_times_text}"
 
 # Create tooltip
 surface_pressure_atm=$(printf "%.2f" "$(echo "scale=4; $surface_pressure * 0.0009869233" | bc -l)")

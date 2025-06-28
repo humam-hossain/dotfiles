@@ -428,13 +428,20 @@ find_next_hour_index() {
     local response="$1"
     local real_datetime=$(date +'%Y-%m-%dT%H:%M')
     
-    jq -r --arg now "$real_datetime" '
+    local idx=$(jq -r --arg now "$real_datetime" '
         .hourly.time
         | to_entries
         | map(select(.value >= $now))
         | first
         | .key // empty
-    ' <<< "$response"
+    ' <<< "$response")
+
+    if [[ -z "$idx" ]]; then
+        # If not found, return last index
+        idx=$(jq -r '.hourly.time | length - 1' <<< "$response")
+    fi
+
+    echo "$idx"
 }
 
 # ===== DATA EXTRACTION FUNCTIONS =====
@@ -569,7 +576,6 @@ main() {
     next_hour_is_day=$(get_is_day "$next_hour_datetime" "$sunset" "$sunrise")
 
     # Generate display components for forecast
-    sun_times_text=$(get_sun_times_display "$sunrise_time" "$sunset_time")
     forecast_weather_text=$(get_weather_code_text "$next_hour_weather_code" "$next_hour_is_day")
     forecast_temp_text=$(get_temp_display_and_color "$next_hour_temp" "$next_hour_apparent_temp" "$curr_temp" "$curr_apparent_temp")
     forecast_humidity_text=$(get_humidity_display "$next_hour_humidity" "$curr_humidity")
@@ -578,7 +584,7 @@ main() {
     forecast_visibility_text=$(get_visibility_display "$next_hour_visibility")
 
     # Construct full display text
-    full_text="${sun_times_text} | ${next_hour_time}: ${forecast_weather_text} ${forecast_temp_text} ${forecast_humidity_text} ${forecast_pressure_text} ${forecast_precipitation_text} ${forecast_visibility_text}"
+    full_text="${next_hour_time}: ${forecast_weather_text} ${forecast_temp_text} ${forecast_humidity_text} ${forecast_pressure_text} ${forecast_precipitation_text} ${forecast_visibility_text}"
 
     # Create comprehensive tooltip
     tooltip_text=$(get_tooltip "$response" "$sunrise" "$sunset" "$curr_temp" "$curr_apparent_temp" "$curr_humidity" "$curr_precipitation" "$curr_pressure" "$curr_datetime_f" "$curr_weather_code_text" "$curr_weather_text")
