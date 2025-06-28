@@ -4,6 +4,8 @@
 # Configuration: set your latitude and longitude here
 LATITUDE=23.763953
 LONGITUDE=90.424419
+CACHE_FILE="$HOME/.config/waybar/api_response.json"
+CACHE_DURATION=900  # 15 minutes in seconds
 
 # Function to get weather text description
 get_weather_text() {
@@ -205,16 +207,20 @@ Updated: ${datetime_f}
     echo "$tooltip_text"
 }
 
-# Function to fetch weather data with caching
+# Fetch weather data with intelligent caching
 fetch_weather_data() {
-    local cache_file="$HOME/.config/waybar/api_response.json"
     local response
-
-    # Check if cache exists and is fresh (less than 15 minutes old)
-    if [[ -f "$cache_file" ]]; then
-        local cache_age=$(( $(date +%s) - $(stat -c %Y "$cache_file") ))
-        if (( cache_age < 900 )); then
-            response=$(cat "$cache_file")
+    
+    # Check cache validity
+    if [[ -f "$CACHE_FILE" ]]; then
+        response=$(cat "$CACHE_FILE")
+        local curr_datetime=$(jq -r '.current.time' <<< "$response")
+        local real_datetime=$(date +'%Y-%m-%dT%H:%M')
+        local real_sec=$(date -d "$real_datetime" +%s)
+        local curr_sec=$(date -d "$curr_datetime" +%s)
+        
+        # Use cache if less than 15 minutes old
+        if (( real_sec - curr_sec <= CACHE_DURATION )); then
             echo "$response"
             return
         fi
@@ -222,17 +228,17 @@ fetch_weather_data() {
 
     # Fetch fresh data
     response=$(curl -s \
-        "https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&daily=sunrise,sunset&hourly=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,precipitation_probability,visibility,surface_pressure&current=weather_code,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure&temperature_unit=celsius&timezone=auto&forecast_days=1")
-
+        "https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&daily=sunrise,sunset&hourly=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,precipitation_probability,visibility,surface_pressure&current=is_day,weather_code,apparent_temperature,temperature_2m,relative_humidity_2m,surface_pressure,precipitation&timezone=auto&temperature_unit=celsius&forecast_days=1")
+    
     if [[ -n "$response" && "$response" != "null" ]]; then
-        # Create cache directory if it doesn't exist
-        mkdir -p "$(dirname "$cache_file")"
-        echo "$response" > "$cache_file"
+        # Create cache directory and save response
+        mkdir -p "$(dirname "$CACHE_FILE")"
+        echo "$response" > "$CACHE_FILE"
+        echo "[INFO] API data refreshed" >&2
     fi
 
     echo "$response"
 }
-
 # Main execution starts here
 
 # Dependencies check
