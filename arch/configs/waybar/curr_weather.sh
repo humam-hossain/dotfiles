@@ -137,8 +137,9 @@ get_temp_display() {
     local temp_display temp_color diff_temp
 
     # Calculate difference between apparent and actual temperature
-    diff_temp=$(echo "$apparent_temp - $temp_2m" | bc)
+    diff_temp=$(echo "scale=1; $apparent_temp - $temp_2m" | bc -l)
     
+    # Check if diff_temp is positive, negative, or zero
     if (( $(echo "$diff_temp > 0" | bc -l) )); then
         temp_display="$temp_2m°C[+$diff_temp]"
     elif (( $(echo "$diff_temp < 0" | bc -l) )); then
@@ -170,7 +171,7 @@ get_humidity_display() {
 # Function to get pressure display
 get_pressure_display() {
     local surface_pressure="$1"
-    local surface_pressure_atm=$(printf "%.2f" "$(echo "scale=4; $surface_pressure * 0.0009869233" | bc)")
+    local surface_pressure_atm=$(printf "%.2f" "$(echo "scale=4; $surface_pressure * 0.0009869233" | bc -l)")
     echo "<span color='#f7dc6f'><span size='11000'>󰡴</span> ${surface_pressure_atm}atm</span>"
 }
 
@@ -206,7 +207,7 @@ Updated: ${datetime_f}
 
 # Function to fetch weather data with caching
 fetch_weather_data() {
-    local cache_file="$HOME/.config/waybar/curr_weather_cache.json"
+    local cache_file="$HOME/.config/waybar/api_response.json"
     local response
 
     # Check if cache exists and is fresh (less than 15 minutes old)
@@ -220,9 +221,8 @@ fetch_weather_data() {
     fi
 
     # Fetch fresh data
-    echo "[INFO] refresh weather data from open-meteo" >&2
     response=$(curl -s \
-        "https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&daily=sunrise,sunset&hourly=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,precipitation_probability,visibility,surface_pressure&current=weather_code,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure&timezone=auto&forecast_days=1")
+        "https://api.open-meteo.com/v1/forecast?latitude=${LATITUDE}&longitude=${LONGITUDE}&daily=sunrise,sunset&hourly=weather_code,temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,precipitation_probability,visibility,surface_pressure&current=weather_code,temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,surface_pressure&temperature_unit=celsius&timezone=auto&forecast_days=1")
 
     if [[ -n "$response" && "$response" != "null" ]]; then
         # Create cache directory if it doesn't exist
@@ -274,7 +274,7 @@ precipitation_text=$(get_precipitation_display "$precipitation")
 full_text="${weather_code_display}  ${temp_text} ${humidity_text} ${pressure_text} ${precipitation_text}"
 
 # Create tooltip
-surface_pressure_atm=$(printf "%.2f" "$(echo "scale=4; $surface_pressure * 0.0009869233" | bc)")
+surface_pressure_atm=$(printf "%.2f" "$(echo "scale=4; $surface_pressure * 0.0009869233" | bc -l)")
 tooltip_text=$(create_tooltip "$weather_code_display" "$weather_text" "$temp_2m" "$apparent_temp" "$humidity" "$surface_pressure_atm" "$precipitation" "$datetime_f")
 
 # Generate final JSON output
